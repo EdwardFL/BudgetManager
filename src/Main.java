@@ -1,3 +1,6 @@
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 
 public class Main {
@@ -6,6 +9,9 @@ public class Main {
     private static final int PURCHASE = 2;
     private static final int SHOW = 3;
     private static final int BALANCE = 4;
+    private static final int SAVE = 5;
+    private static final int LOAD = 6;
+    private static final String FILE_NAME = "purchases.txt";
     private static final String[] CATEGORIES = {"Food", "Clothes", "Entertainment", "Other"};
     private static double balance;
     private static Map<String, Purchase> purchases = new HashMap<>();
@@ -44,6 +50,12 @@ public class Main {
                 case BALANCE:
                     displayBalance();
                     break;
+                case SAVE:
+                    savePurchasesToFile();
+                    break;
+                case LOAD:
+                    loadPurchasesFromFile();
+                    break;
                 case EXIT:
                     System.out.println("Bye!");
                     input.close();
@@ -68,7 +80,44 @@ public class Main {
         System.out.println("2) Add purchase");
         System.out.println("3) Show list of purchases");
         System.out.println("4) Balance");
+        System.out.println("5) Save");
+        System.out.println("6) Load");
         System.out.println("0) Exit");
+    }
+
+    public static void savePurchasesToFile() {
+        try (PrintWriter printWriter = new PrintWriter(FILE_NAME)) {
+            printWriter.println(String.format("%.2f", getBalance())); // Save the balance with 2 decimal places
+            for (Map.Entry<String, Purchase> entry : purchases.entrySet()) {
+                String purchaseName = entry.getKey();
+                double purchasePrice = entry.getValue().getPrice();
+                String category = entry.getValue().getCategory();
+                printWriter.println(purchaseName + "," + purchasePrice + "," + category);
+            }
+            System.out.println("Purchases were saved!\n");
+        }catch (IOException e) {
+            System.out.println("Error saving purchases to file: " + e.getMessage());
+        }
+    }
+
+    public static void loadPurchasesFromFile() {
+        try (Scanner fileScanner = new Scanner(new File(FILE_NAME))) {
+            purchases.clear();
+            setBalance(Double.parseDouble(fileScanner.nextLine())); // Load the balance
+            while (fileScanner.hasNextLine()) {
+                String line = fileScanner.nextLine();
+                String[] parts = line.split(",");
+                if (parts.length == 3) {
+                    String purchaseName = parts[0];
+                    double purchasePrice = Double.parseDouble(parts[1]);
+                    String category = parts[2];
+                    purchases.put(purchaseName, new Purchase(purchasePrice, category));
+                }
+            }
+            System.out.println("Purchases were loaded!\n");
+        } catch (IOException e) {
+            System.out.println("Error loading purchases from file: " + e.getMessage());
+        }
     }
 
     public static void addPurchase() {
@@ -104,7 +153,7 @@ public class Main {
 
         purchases.put(purchaseName, new Purchase(purchasePrice, category));
 
-        setBalance(getBalance() - purchasePrice);
+        setBalance(-purchasePrice);
         System.out.println("Purchase was added!\n");
     }
 
@@ -138,7 +187,6 @@ public class Main {
             }
         }
     }
-
     public static void displayPurchases(boolean displayAll, String category) {
         System.out.println("\n" + (displayAll ? "All" : category) + ":");
 
@@ -147,26 +195,23 @@ public class Main {
 
         for (Map.Entry<String, Purchase> entry : purchases.entrySet()) {
             Purchase purchase = entry.getValue();
-            if (displayAll || purchase.getCategory().equals(category)) {
+            if (displayAll || purchase.getCategory().equalsIgnoreCase(category)) {
                 String purchaseName = entry.getKey();
-                double purchasePrice = purchase.getPrice();
-
-                if (!Arrays.asList(CATEGORIES).contains(purchaseName) && purchasePrice > 0) {
-                    System.out.println(purchaseName + " $" + String.format("%.2f", purchasePrice));
-                    totalAmount += purchasePrice;
-                    purchasesFound = true;
-                }
+                System.out.println(purchaseName + " $" + String.format("%.2f", purchase.getPrice()));
+                totalAmount += purchase.getPrice();
+                purchasesFound = true;
             }
         }
 
         if (!purchasesFound) {
-            System.out.println("The purchase list is empty!\n");
+            System.out.println("No purchases found in this category.\n");
         } else {
             System.out.println("Total sum: $" + String.format("%.2f", totalAmount) + "\n");
         }
     }
 
+
     public static void displayBalance() {
-        System.out.println("\nBalance: $" + String.format("%.2f", getBalance()) + "\n");
+        System.out.println("Balance: $" + String.format("%.2f", getBalance()) + "\n");
     }
 }
